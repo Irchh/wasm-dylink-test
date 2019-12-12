@@ -76,25 +76,30 @@ function addFunction(func, sig) {
 		var wrapFunc = instance.exports.f;
 		function_table.set(index, wrapFunc);
 	}
+	console.log("New function!aasdasdasd ");
+	console.log(index);
 	return index;
 }
 
+var loading = false;
 async function dlopen(str, idk) {
+	loading = true;
 	console.log(str, idk);
-	/*let index = await load_lib(str);
+	let index = await load_lib(str);
 	console.log("index:",index);
-	return index;*/
-	return load_lib(str);
+	loading = false;
+	return index;
+	//return load_lib(str);
 }
 
 async function dlsym(index, func_name) {
+	while (loading){}
 	console.log(index, func_name+", expected: "+(libs.length-1));
 	if (libs[index].inst.exports[func_name] != undefined) {
 		console.log("DLSYM: DEFINED");
 		return await addFunction(libs[index].inst.exports[func_name]);
 	}else{
 		console.log("DLSYM: UNDEFINED");
-//		console.log(libs[index].inst.exports);
 		return 0;
 	}
 }
@@ -115,17 +120,17 @@ let importObject = {
 };
 
 async function load_lib(path) {
-	var lib = fs.readFileSync(path);
-	await WebAssembly.instantiate(lib, importObject).then(async results => {
+	const lib = fs.readFileSync(path);
+	console.log("ass");
+	await WebAssembly.instantiate(lib, importObject).then(results => {
 		libs.push({name: path, inst: results.instance})
-		Object.assign(importObject.env, libs[libs.length-1].inst.exports);
 		console.log("Lib done: "+path);
 	});
 	return libs.length-1;
 }
 
 async function load_bin() {
-	await WebAssembly.instantiate(module2buf, importObject).then(async results => {
+	return WebAssembly.instantiate(module2buf, importObject).then(results => {
 		mod2 = results.instance;
 		mod2.exports.main();
 		console.log("Main done");
@@ -133,10 +138,15 @@ async function load_bin() {
 }
 
 async function main() {
-	load_lib("./module1.wasm").then(function() {
-		load_bin();
+	await load_lib("./module1.wasm").then(async result => {
+		Object.assign(importObject.env, libs[result].inst.exports);
+		try{
+			await load_bin();
+		}catch(e){
+			console.log(e);
+		}
 	});
-	/*console.log("Done");*/
+	console.log("Doqweqewqewqewqeweqwne");
 }
 
 main();
